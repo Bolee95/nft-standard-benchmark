@@ -15,4 +15,14 @@ contract DemoERC721 is ERC721 {
             }
         }
     }
+
+    function burn(uint256 quantity) external {
+        for (uint256 i; i < quantity;) {
+            _burn(i);
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
 }
