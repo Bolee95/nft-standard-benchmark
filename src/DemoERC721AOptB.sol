@@ -11,7 +11,15 @@ import {ERC721ABatchBurnable, ERC721A} from "ERC721A-opt-burn/extensions/ERC721A
 contract DemoERC721AOptB is ERC721ABatchBurnable {
     constructor() ERC721A("DemoERC721AOptB", "DemoERC721AOptB") {}
 
-    function mint(address account, uint256 quantity) external {
+    function singleMint(address account) external {
+        _mint(account, 1);
+    }
+
+    function batchMint(address account, uint256 quantity) external {
         _mint(account, quantity);
+    }
+
+    function singleBurn(uint256 tokenId) external {
+        _burn(tokenId);
     }
 }

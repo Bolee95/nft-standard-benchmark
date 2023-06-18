@@ -6,7 +6,11 @@ import {ERC721} from "oz-contracts/contracts/token/ERC721/ERC721.sol";
 contract DemoERC721 is ERC721 {
     constructor() ERC721("DemoERC721", "DEMO721") {}
 
-    function mint(address account, uint256 quantity) external {
+    function singleMint(address account) external {
+        _mint(account, 1);
+    }
+
+    function batchMint(address account, uint256 quantity) external {
         for (uint256 i; i < quantity;) {
             _mint(account, i);
 
@@ -16,7 +20,11 @@ contract DemoERC721 is ERC721 {
         }
     }
 
-    function burn(uint256 quantity) external {
+    function singleBurn(uint256 tokenId) external {
+        _burn(tokenId);
+    }
+
+    function batchBurn(uint256 quantity) external {
         for (uint256 i; i < quantity;) {
             _burn(i);
 

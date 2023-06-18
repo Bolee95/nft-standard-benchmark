@@ -12,7 +12,11 @@ import {ERC721ABatchTransferable, ERC721A} from "ERC721A-opt-transfer/extensions
 contract DemoERC721AOptT is ERC721ABatchTransferable {
     constructor() ERC721A("DemoERC721AOptT", "DemoERC721AOptT") {}
 
-    function mint(address account, uint256 quantity) external {
+    function singleMint(address account) external {
+        _mint(account, 1);
+    }
+
+    function batchMint(address account, uint256 quantity) external {
         _mint(account, quantity);
     }
 }

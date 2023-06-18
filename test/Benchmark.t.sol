@@ -10,8 +10,11 @@ import {DemoERC721AOptT} from "../src/DemoERC721AOptT.sol";
 import {DemoERC721AOptB} from "../src/DemoERC721AOptB.sol";
 
 /**
- * [x] Get numbers of SREAD and SSTORE operations per call
- * [] Check why single burn shows no reads or writes for 1155, 721, 721A
+ * [x] Get numbers of SLOAD and SSTORE operations per call
+ * [x] Check why single burn shows no reads or writes for 1155, 721, 721A
+ *         -  For 1155, it should have at least 1 read and 1 write
+ * [] Add single and batch transfers
+ * [] Add non-sequenctial options for burn and transfer
  */
 
 contract BenchmarkTest is Test {
@@ -25,6 +28,14 @@ contract BenchmarkTest is Test {
     uint256 public batchMintQuantity = 100;
     address public tokenReceiver = address(1);
 
+    modifier showReadWrites(bool startRecord, string memory pTitle) {
+        _startRecord();
+
+        _;
+
+        _getReadWrites(pTitle);
+    }
+
     function setUp() public {
         demoERC1155 = new DemoERC1155();
         demoERC721 = new DemoERC721();
@@ -33,55 +44,44 @@ contract BenchmarkTest is Test {
         demoERC721AOptB = new DemoERC721AOptB();
     }
 
-    function testSingleMint() public {
-        _startRecord();
-
-        _mintNonOptimized(tokenReceiver, 1);
-
-        _getReadWrites("SingleMint");
+    function testSingleMint() public showReadWrites(true, "SingleMint") {
+        _singleMintNonOptimized(tokenReceiver);
     }
 
-    function testBatchMint() public {
-        _startRecord();
-
-        _mintNonOptimized(tokenReceiver, batchMintQuantity);
-
-        _getReadWrites("BatchMint");
+    function testBatchMint() public showReadWrites(true, "BatchMint") {
+        _batchMintNonOptimized(tokenReceiver, batchMintQuantity);
     }
 
-    function testSingleBurn() public {
-        _mintNonOptimized(tokenReceiver, 1);
-        demoERC721AOptB.mint(tokenReceiver, 1);
+    function testSingleBurn() public showReadWrites(false, "SingleBurn") {
+        _singleMintNonOptimized(tokenReceiver);
+        demoERC721AOptB.singleMint(tokenReceiver);
 
         _startRecord();
-
-        demoERC1155.burn(0);
-        demoERC721.burn(0);
-        demoERC721A.burn(0);
 
         // Burn can be called only by owner or approved
         // so we are going to be owner
         vm.prank(tokenReceiver);
 
-        uint256[] memory ids = new uint256[](1);
-        ids[0] = 0;
-        demoERC721AOptB.batchBurn(ids);
+        demoERC1155.singleBurn(0);
+        // FIXME Check this
+        demoERC721.singleBurn(1);
+        demoERC721A.singleBurn(0);
 
-        _getReadWrites("SingleBurn");
+        demoERC721AOptB.singleBurn(0);
     }
 
-    function testBatchBurn() public {
-        _mintNonOptimized(tokenReceiver, batchMintQuantity);
-        demoERC721AOptB.mint(tokenReceiver, batchMintQuantity);
+    function testBatchBurn() public showReadWrites(false, "BatchBurn") {
+        _batchMintNonOptimized(tokenReceiver, batchMintQuantity);
+        demoERC721AOptB.batchMint(tokenReceiver, batchMintQuantity);
 
         _startRecord();
 
         // Burn can be called only by owner or approved
         // so we are going to be owner
         vm.startPrank(tokenReceiver);
-        demoERC1155.burn(batchMintQuantity);
-        demoERC721.burn(batchMintQuantity);
-        demoERC721A.burn(batchMintQuantity);
+        demoERC1155.batchBurn(batchMintQuantity);
+        demoERC721.batchBurn(batchMintQuantity);
+        demoERC721A.batchBurn(batchMintQuantity);
 
         uint256[] memory ids = new uint256[](batchMintQuantity);
         for (uint256 i; i < batchMintQuantity;) {
@@ -93,30 +93,33 @@ contract BenchmarkTest is Test {
         }
 
         demoERC721AOptB.batchBurn(ids);
-
-        _getReadWrites("BatchBurn");
     }
 
-    function _mintNonOptimized(address account, uint256 quantity) private {
-        demoERC1155.mint(account, quantity);
-        demoERC721.mint(account, quantity);
-        demoERC721A.mint(account, quantity);
+    function _singleMintNonOptimized(address account) private {
+        demoERC1155.singleMint(account);
+        demoERC721.singleMint(account);
+        demoERC721A.singleMint(account);
+    }
+
+    function _batchMintNonOptimized(address account, uint256 quantity) private {
+        demoERC1155.batchMint(account, quantity);
+        demoERC721.batchMint(account, quantity);
+        demoERC721A.batchMint(account, quantity);
     }
 
     function _startRecord() private {
-        if (!collectReadWrites) return;
-        vm.record();
+        if (collectReadWrites) vm.record();
     }
 
-    function _getReadWrites(string memory processTitle) private {
+    function _getReadWrites(string memory pTitle) private {
         if (!collectReadWrites) return;
-
-        console.log("--------------------------------------------------");
-        console.log(processTitle);
-        console.log("--------------------------------------------------");
 
         bytes32[] memory reads;
         bytes32[] memory writes;
+
+        console.log("--------------------------------------------------");
+        console.log(pTitle);
+        console.log("--------------------------------------------------");
 
         (reads, writes) = vm.accesses(address(demoERC1155));
         _print(type(DemoERC1155).name, reads.length, writes.length);
