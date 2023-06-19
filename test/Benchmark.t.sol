@@ -13,7 +13,7 @@ import {DemoERC721AOptB} from "../src/DemoERC721AOptB.sol";
  * [x] Get numbers of SLOAD and SSTORE operations per call
  * [x] Check why single burn shows no reads or writes for 1155, 721, 721A
  *         -  For 1155, it should have at least 1 read and 1 write
- * [] Add single and batch transfers
+ * [x] Add single and batch transfers
  * [] Add non-sequenctial options for burn and transfer
  */
 
@@ -25,7 +25,7 @@ contract BenchmarkTest is Test {
     DemoERC721AOptB public demoERC721AOptB;
 
     bool public collectReadWrites = true;
-    uint256 public batchMintQuantity = 100;
+    uint256 public batchSize = 100;
     address public tokenReceiver = address(1);
 
     modifier showReadWrites(bool startRecord, string memory pTitle) {
@@ -49,7 +49,7 @@ contract BenchmarkTest is Test {
     }
 
     function testBatchMint() public showReadWrites(true, "BatchMint") {
-        _batchMintNonOptimized(tokenReceiver, batchMintQuantity);
+        _batchMintNonOptimized(tokenReceiver, batchSize);
     }
 
     function testSingleBurn() public showReadWrites(false, "SingleBurn") {
@@ -63,28 +63,26 @@ contract BenchmarkTest is Test {
         vm.prank(tokenReceiver);
 
         demoERC1155.singleBurn(0);
-        // FIXME Check this
-        demoERC721.singleBurn(1);
+        demoERC721.singleBurn(0);
         demoERC721A.singleBurn(0);
-
         demoERC721AOptB.singleBurn(0);
     }
 
     function testBatchBurn() public showReadWrites(false, "BatchBurn") {
-        _batchMintNonOptimized(tokenReceiver, batchMintQuantity);
-        demoERC721AOptB.batchMint(tokenReceiver, batchMintQuantity);
+        _batchMintNonOptimized(tokenReceiver, batchSize);
+        demoERC721AOptB.batchMint(tokenReceiver, batchSize);
 
         _startRecord();
 
         // Burn can be called only by owner or approved
         // so we are going to be owner
         vm.startPrank(tokenReceiver);
-        demoERC1155.batchBurn(batchMintQuantity);
-        demoERC721.batchBurn(batchMintQuantity);
-        demoERC721A.batchBurn(batchMintQuantity);
+        demoERC1155.batchBurn(batchSize);
+        demoERC721.batchBurn(batchSize);
+        demoERC721A.batchBurn(batchSize);
 
-        uint256[] memory ids = new uint256[](batchMintQuantity);
-        for (uint256 i; i < batchMintQuantity;) {
+        uint256[] memory ids = new uint256[](batchSize);
+        for (uint256 i; i < batchSize;) {
             ids[i] = i;
 
             unchecked {
@@ -93,6 +91,48 @@ contract BenchmarkTest is Test {
         }
 
         demoERC721AOptB.batchBurn(ids);
+    }
+
+    function testSingleTransfer() public showReadWrites(false, "SingleTransfer") {
+        address demoTo = address(2);
+
+        _singleMintNonOptimized(tokenReceiver);
+        demoERC721AOptT.singleMint(tokenReceiver);
+
+        _startRecord();
+
+        vm.startPrank(tokenReceiver);
+
+        demoERC721.singleTransfer(demoTo, 0);
+        demoERC1155.singleTransfer(demoTo, 0);
+        demoERC721A.singleTransfer(demoTo, 0);
+        demoERC721AOptT.singleTransfer(demoTo, _asSingletonArray(0));
+    }
+
+    function testBatchTransfer() public showReadWrites(false, "BatchTransfer") {
+        address demoTo = address(2);
+
+        _batchMintNonOptimized(tokenReceiver, batchSize);
+        demoERC721AOptT.batchMint(tokenReceiver, batchSize);
+
+        _startRecord();
+
+        vm.startPrank(tokenReceiver);
+
+        demoERC721.batchTransfer(demoTo, batchSize);
+        demoERC1155.batchTransfer(demoTo, batchSize);
+        demoERC721A.batchTransfer(demoTo, batchSize);
+
+        uint256[] memory ids = new uint256[](batchSize);
+        for (uint256 i; i < batchSize;) {
+            ids[i] = i;
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        demoERC721AOptT.batchTransfer(demoTo, ids);
     }
 
     function _singleMintNonOptimized(address account) private {
@@ -140,5 +180,12 @@ contract BenchmarkTest is Test {
      */
     function _print(string memory cName, uint256 reads, uint256 writes) private view {
         console.log("%s - reads: %d - writes: %d", cName, reads - writes, writes);
+    }
+
+    function _asSingletonArray(uint256 element) private pure returns (uint256[] memory) {
+        uint256[] memory array = new uint256[](1);
+        array[0] = element;
+
+        return array;
     }
 }

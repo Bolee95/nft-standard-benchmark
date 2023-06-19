@@ -6,12 +6,12 @@ import {ERC721A} from "ERC721A/ERC721A.sol";
 contract DemoERC721A is ERC721A {
     constructor() ERC721A("DemoERC721A", "DEMO721A") {}
 
-    function singleMint(address account) external {
-        _mint(account, 1);
+    function singleMint(address to) external {
+        _mint(to, 1);
     }
 
-    function batchMint(address account, uint256 quantity) external {
-        _mint(account, quantity);
+    function batchMint(address to, uint256 quantity) external {
+        _mint(to, quantity);
     }
 
     function singleBurn(uint256 tokenId) external {
@@ -21,6 +21,20 @@ contract DemoERC721A is ERC721A {
     function batchBurn(uint256 quantity) external {
         for (uint256 i; i < quantity;) {
             _burn(i);
+
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function singleTransfer(address to, uint256 tokenId) external {
+        transferFrom(msg.sender, to, tokenId);
+    }
+
+    function batchTransfer(address to, uint256 quantity) external {
+        for (uint256 i; i < quantity;) {
+            transferFrom(msg.sender, to, i);
 
             unchecked {
                 ++i;
