@@ -30,7 +30,16 @@ contract DemoERC721AOptT is ERC721ABatchTransferable {
     }
 
     /// @dev Transfers tokens with `ids` from owner to the `to` address
-    function batchTransfer(address to, uint256[] calldata ids) external {
+    ///      Sequential means that the token IDs are in ascending order and without gap
+    ///      For testing purposes only
+    function batchTransferSequential(address to, uint256[] calldata ids) external {
+        _batchTransferFrom(msg.sender, to, ids, true);
+    }
+
+    /// @dev Transfers tokens with `ids` from owner to the `to` address
+    ///      Non-sequential means that the token IDs are in ascending order and with gap
+    ///      For testing purposes only
+    function batchTransferNonSequential(address to, uint256[] calldata ids) external {
         _batchTransferFrom(msg.sender, to, ids, true);
     }
 }

@@ -21,7 +21,7 @@ import {DemoERC721AOptB} from "../src/DemoERC721AOptB.sol";
  * Read and write operations should be also generated separately
  */
 
-abstract contract BenchmarkTest is Test {
+contract BenchmarkTest is Test {
     DemoERC1155 public demoERC1155;
     DemoERC721 public demoERC721;
     DemoERC721A public demoERC721A;
@@ -32,13 +32,11 @@ abstract contract BenchmarkTest is Test {
     address public tokenReceiver = address(1);
 
     modifier showReadWrites(bool startRecord, string memory pTitle) {
-        _startRecord();
+        if (startRecord) vm.record();
 
         _;
 
-        if (_collectReadWrites()) {
-            _getReadWrites(pTitle);
-        }
+        _getReadWrites(pTitle);
     }
 
     function setUp() public {
@@ -64,11 +62,8 @@ abstract contract BenchmarkTest is Test {
         _singleMintNonOptimized(tokenReceiver, demoId);
         demoERC721AOptB.singleMint(tokenReceiver);
 
-        _startRecord();
-
-        // Burn can be called only by owner or approved
-        // so we are going to be owner
-        vm.prank(tokenReceiver);
+        vm.record();
+        vm.startPrank(tokenReceiver);
 
         demoERC1155.singleBurn(demoId);
         demoERC721.singleBurn(demoId);
@@ -77,16 +72,11 @@ abstract contract BenchmarkTest is Test {
     }
 
     function testBatchBurnSequential() public showReadWrites(false, "BatchBurnSequential") {
-        uint256[] memory ids = _createIds({quantity: batchSize});
-        _batchBurn({ids: ids, sequential: true});
+        _batchBurn({ids: _createIds(batchSize), sequential: true});
     }
 
     function testBatchBurnNonSequential() public showReadWrites(false, "BatchBurnNonSequential") {
-        // Multiplier added in case more ids are needed as only even ids will be used
-        // This way we will get a proper read/write report
-        uint256 multiplier = _collectReadWrites() ? 2 : 1;
-        uint256[] memory ids = _createIds({quantity: batchSize * multiplier});
-        _batchBurn({ids: ids, sequential: false});
+        _batchBurn({ids: _createIds(batchSize), sequential: false});
     }
 
     function _batchBurn(uint256[] memory ids, bool sequential) private {
@@ -95,26 +85,28 @@ abstract contract BenchmarkTest is Test {
         _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptB.batchMint(tokenReceiver, ids.length);
 
-        _startRecord();
-
-        // Burn can be called only by owner or approved
-        // so we are going to be owner
+        vm.record();
         vm.startPrank(tokenReceiver);
+
         demoERC1155.batchBurn(burnIds);
         demoERC721.batchBurn(burnIds);
         demoERC721A.batchBurn(burnIds);
-        demoERC721AOptB.batchBurn(burnIds);
+
+        if (sequential) {
+            demoERC721AOptB.batchBurnSequential(burnIds);
+        } else {
+            demoERC721AOptB.batchBurnNonSequential(burnIds);
+        }
     }
 
     function testSingleTransfer() public showReadWrites(false, "SingleTransfer") {
-        address demoTo = address(2);
         uint256 demoId = 2;
+        address demoTo = address(2);
 
         _singleMintNonOptimized(tokenReceiver, demoId);
         demoERC721AOptT.singleMint(tokenReceiver);
 
-        _startRecord();
-
+        vm.record();
         vm.startPrank(tokenReceiver);
 
         demoERC721.singleTransfer(demoTo, demoId);
@@ -124,16 +116,11 @@ abstract contract BenchmarkTest is Test {
     }
 
     function testBatchTransferSequential() public showReadWrites(false, "BatchTransferSequential") {
-        uint256[] memory ids = _createIds({quantity: batchSize});
-        _batchTransfer({ids: ids, sequential: true});
+        _batchTransfer({ids: _createIds(batchSize), sequential: true});
     }
 
     function testBatchTransferNonSequential() public showReadWrites(false, "BatchTransferNonSequential") {
-        // Multiplier added in case more ids are needed as only even ids will be used
-        // This way we will get a proper read/write report
-        uint256 multiplier = _collectReadWrites() ? 2 : 1;
-        uint256[] memory ids = _createIds({quantity: batchSize * multiplier});
-        _batchTransfer({ids: ids, sequential: false});
+        _batchTransfer({ids: _createIds(batchSize), sequential: false});
     }
 
     function _batchTransfer(uint256[] memory ids, bool sequential) private {
@@ -143,14 +130,18 @@ abstract contract BenchmarkTest is Test {
         _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptT.batchMint(tokenReceiver, ids.length);
 
-        _startRecord();
-
+        vm.record();
         vm.startPrank(tokenReceiver);
 
         demoERC721.batchTransfer(demoTo, transferIds);
         demoERC1155.batchTransfer(demoTo, transferIds);
         demoERC721A.batchTransfer(demoTo, transferIds);
-        demoERC721AOptT.batchTransfer(demoTo, transferIds);
+
+        if (sequential) {
+            demoERC721AOptT.batchTransferSequential(demoTo, transferIds);
+        } else {
+            demoERC721AOptT.batchTransferNonSequential(demoTo, transferIds);
+        }
     }
 
     function _singleMintNonOptimized(address account, uint256 id) private {
@@ -165,10 +156,6 @@ abstract contract BenchmarkTest is Test {
         demoERC721.batchMint(account, ids);
         // Tokens always minted in suquential order
         demoERC721A.batchMint(account, ids.length);
-    }
-
-    function _startRecord() private {
-        if (_collectReadWrites()) vm.record();
     }
 
     function _getReadWrites(string memory pTitle) private {
@@ -228,6 +215,4 @@ abstract contract BenchmarkTest is Test {
 
         return array;
     }
-
-    function _collectReadWrites() internal virtual returns (bool);
 }

@@ -28,5 +28,17 @@ contract DemoERC721AOptB is ERC721ABatchBurnable {
         _burn(id);
     }
 
-    /// note `batchBurn` is defined in `ERC721ABatchBurnable` extension
+    /// @dev Burns tokens with `ids` from the owner address
+    ///      Sequential means that the token IDs are in ascending order and without gap
+    ///      For testing purposes only
+    function batchBurnSequential(uint256[] calldata ids) external {
+        _batchBurn(msg.sender, ids, true);
+    }
+
+    /// @dev Burns tokens with `ids` from the owner address
+    ///      Non-sequential means that the token IDs are in ascending order and with gap
+    ///      For testing purposes only
+    function batchBurnNonSequential(uint256[] calldata ids) external {
+        _batchBurn(msg.sender, ids, true);
+    }
 }
