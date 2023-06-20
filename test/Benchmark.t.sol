@@ -73,13 +73,24 @@ contract BenchmarkTest is Test {
         demoERC721AOptB.singleBurn(demoId);
     }
 
-    function testBatchBurnNonSequential() public showReadWrites(false, "BatchBurn") {
-        uint256[] memory ids = _createIds({quantity: batchSize});
+    // function testBatchBurnSequential() public showReadWrites(false, "BatchBurnSequential") {
+    //     uint256[] memory ids = _createIds({quantity: batchSize});
+    //     _batchBurn(ids);
+    // }
 
+    function testBatchBurnNonSequential() public showReadWrites(false, "BatchBurnNonSequential") {
+        uint256[] memory ids = _createIds({quantity: batchSize});
+        _batchBurn(_exctractEvenIds(ids));
+    }
+
+    function _batchBurn(uint256[] memory ids) private {
         _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptB.batchMint(tokenReceiver, batchSize);
 
         _startRecord();
+
+        console.log(demoERC721A.totalSupply());
+        console.log(demoERC721A.ownerOf(98));
 
         // Burn can be called only by owner or approved
         // so we are going to be owner
@@ -87,7 +98,7 @@ contract BenchmarkTest is Test {
         demoERC1155.batchBurn(ids);
         demoERC721.batchBurn(ids);
         demoERC721A.batchBurn(ids);
-        demoERC721AOptB.batchBurn(ids);
+        // demoERC721AOptB.batchBurn(ids);
     }
 
     function testSingleTransfer() public showReadWrites(false, "SingleTransfer") {
@@ -107,7 +118,7 @@ contract BenchmarkTest is Test {
         demoERC721AOptT.singleTransfer(demoTo, 0);
     }
 
-    function testBatchTransferSequential() public showReadWrites(false, "BatchTransfer") {
+    function testBatchTransfer() public showReadWrites(false, "BatchTransfer") {
         address demoTo = address(2);
         uint256[] memory ids = _createIds({quantity: batchSize});
 
@@ -184,6 +195,15 @@ contract BenchmarkTest is Test {
         }
 
         return ids;
+    }
+
+    function _exctractEvenIds(uint256[] memory ids) private view returns (uint256[] memory) {
+        uint256[] memory evenIds = new uint256[](ids.length / 2);
+        for (uint256 i; i < ids.length; i += 2) {
+            evenIds[i / 2] = ids[i];
+        }
+
+        return evenIds;
     }
 
     function _asSingletonArray(uint256 element) private pure returns (uint256[] memory) {
