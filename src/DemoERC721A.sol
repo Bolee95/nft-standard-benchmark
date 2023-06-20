@@ -6,21 +6,29 @@ import {ERC721A} from "ERC721A/ERC721A.sol";
 contract DemoERC721A is ERC721A {
     constructor() ERC721A("DemoERC721A", "DEMO721A") {}
 
+    /// @dev Mints token to the `to` address
+    ///      Token ID will be automatically assigned starting from 0 to 2^256 - 1
     function singleMint(address to) external {
         _mint(to, 1);
     }
 
+    /// @dev Mints `quantity` tokens to the `to` address
+    ///      Token ID will be automatically assigned starting from 0 to 2^256 - 1
     function batchMint(address to, uint256 quantity) external {
         _mint(to, quantity);
     }
 
-    function singleBurn(uint256 tokenId) external {
-        _burn(tokenId);
+    /// @dev Burns token with `id` from the owner address
+    function singleBurn(uint256 id) external {
+        _burn(id);
     }
 
-    function batchBurn(uint256 quantity) external {
-        for (uint256 i; i < quantity;) {
-            _burn(i);
+    /// @dev Burns tokens with `ids` from the owner address
+    function batchBurn(uint256[] calldata ids) external {
+        uint256 len = ids.length;
+
+        for (uint256 i; i < len;) {
+            _burn(ids[i]);
 
             unchecked {
                 ++i;
@@ -28,13 +36,17 @@ contract DemoERC721A is ERC721A {
         }
     }
 
-    function singleTransfer(address to, uint256 tokenId) external {
-        transferFrom(msg.sender, to, tokenId);
+    /// @dev Transfers token with `id` from the `from` address to the `to` address
+    function singleTransfer(address to, uint256 id) external {
+        transferFrom(msg.sender, to, id);
     }
 
-    function batchTransfer(address to, uint256 quantity) external {
-        for (uint256 i; i < quantity;) {
-            transferFrom(msg.sender, to, i);
+    /// @dev Transfers tokens with `ids` from the `from` address to the `to` address
+    function batchTransfer(address to, uint256[] calldata ids) external {
+        uint256 len = ids.length;
+
+        for (uint256 i; i < len;) {
+            transferFrom(msg.sender, to, ids[i]);
 
             unchecked {
                 ++i;

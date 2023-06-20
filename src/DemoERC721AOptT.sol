@@ -12,19 +12,25 @@ import {ERC721ABatchTransferable, ERC721A} from "ERC721A-opt-transfer/extensions
 contract DemoERC721AOptT is ERC721ABatchTransferable {
     constructor() ERC721A("DemoERC721AOptT", "DemoERC721AOptT") {}
 
+    /// @dev Mints token to the `to` address
+    ///      Token ID will be automatically assigned starting from 0 to 2^256 - 1
     function singleMint(address to) external {
         _mint(to, 1);
     }
 
+    /// @dev Mints `quantity` tokens to the `to` address
+    ///      Token ID will be automatically assigned starting from 0 to 2^256 - 1
     function batchMint(address to, uint256 quantity) external {
         _mint(to, quantity);
     }
 
-    function singleTransfer(address to, uint256[] memory tokenIds) external {
-        _batchTransferFrom(msg.sender, to, tokenIds, true);
+    /// @dev Transfers token with `id` from owner to the `to` address
+    function singleTransfer(address to, uint256 id) external {
+        safeTransferFrom(msg.sender, to, id);
     }
 
-    function batchTransfer(address to, uint256[] memory tokenIds) external {
-        _batchTransferFrom(msg.sender, to, tokenIds, true);
+    /// @dev Transfers tokens with `ids` from owner to the `to` address
+    function batchTransfer(address to, uint256[] calldata ids) external {
+        _batchTransferFrom(msg.sender, to, ids, true);
     }
 }

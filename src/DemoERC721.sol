@@ -6,13 +6,17 @@ import {ERC721} from "oz-contracts/contracts/token/ERC721/ERC721.sol";
 contract DemoERC721 is ERC721 {
     constructor() ERC721("DemoERC721", "DEMO721") {}
 
-    function singleMint(address to) external {
-        _mint(to, 0);
+    /// @dev Mints token with `id` to the `to` address
+    function singleMint(address to, uint256 id) external {
+        _mint(to, id);
     }
 
-    function batchMint(address to, uint256 quantity) external {
-        for (uint256 i; i < quantity;) {
-            _mint(to, i);
+    /// @dev Mints tokens with `ids` to the `to` address
+    function batchMint(address to, uint256[] calldata ids) external {
+        uint256 len = ids.length;
+
+        for (uint256 i; i < len;) {
+            _mint(to, ids[i]);
 
             unchecked {
                 ++i;
@@ -20,13 +24,16 @@ contract DemoERC721 is ERC721 {
         }
     }
 
-    function singleBurn(uint256 tokenId) external {
-        _burn(tokenId);
+    /// @dev Burns token with `id` from the owner address
+    function singleBurn(uint256 id) external {
+        _burn(id);
     }
 
-    function batchBurn(uint256 quantity) external {
-        for (uint256 i; i < quantity;) {
-            _burn(i);
+    function batchBurn(uint256[] calldata ids) external {
+        uint256 len = ids.length;
+
+        for (uint256 i; i < len;) {
+            _burn(ids[i]);
 
             unchecked {
                 ++i;
@@ -34,13 +41,17 @@ contract DemoERC721 is ERC721 {
         }
     }
 
-    function singleTransfer(address to, uint256 tokenId) external {
-        _transfer(msg.sender, to, tokenId);
+    /// @dev Transfers token with `id` from the `from` address to the `to` address
+    function singleTransfer(address to, uint256 id) external {
+        _transfer(msg.sender, to, id);
     }
 
-    function batchTransfer(address to, uint256 quantity) external {
-        for (uint256 i; i < quantity;) {
-            _transfer(msg.sender, to, i);
+    /// @dev Transfers tokens with `ids` from the `from` address to the `to` address
+    function batchTransfer(address to, uint256[] calldata ids) external {
+        uint256 len = ids.length;
+
+        for (uint256 i; i < len;) {
+            _transfer(msg.sender, to, ids[i]);
 
             unchecked {
                 ++i;

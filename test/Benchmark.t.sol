@@ -45,15 +45,18 @@ contract BenchmarkTest is Test {
     }
 
     function testSingleMint() public showReadWrites(true, "SingleMint") {
-        _singleMintNonOptimized(tokenReceiver);
+        _singleMintNonOptimized(tokenReceiver, 0);
     }
 
     function testBatchMint() public showReadWrites(true, "BatchMint") {
-        _batchMintNonOptimized(tokenReceiver, batchSize);
+        uint256[] memory ids = _createIds({seqential: true, quantity: batchSize});
+        _batchMintNonOptimized(tokenReceiver, ids);
     }
 
     function testSingleBurn() public showReadWrites(false, "SingleBurn") {
-        _singleMintNonOptimized(tokenReceiver);
+        uint256 demoId = 0;
+
+        _singleMintNonOptimized(tokenReceiver, demoId);
         demoERC721AOptB.singleMint(tokenReceiver);
 
         _startRecord();
@@ -62,14 +65,15 @@ contract BenchmarkTest is Test {
         // so we are going to be owner
         vm.prank(tokenReceiver);
 
-        demoERC1155.singleBurn(0);
-        demoERC721.singleBurn(0);
-        demoERC721A.singleBurn(0);
-        demoERC721AOptB.singleBurn(0);
+        demoERC1155.singleBurn(demoId);
+        demoERC721.singleBurn(demoId);
+        demoERC721A.singleBurn(demoId);
+        demoERC721AOptB.singleBurn(demoId);
     }
 
     function testBatchBurn() public showReadWrites(false, "BatchBurn") {
-        _batchMintNonOptimized(tokenReceiver, batchSize);
+        uint256[] memory ids = _createIds(true, batchSize);
+        _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptB.batchMint(tokenReceiver, batchSize);
 
         _startRecord();
@@ -77,74 +81,58 @@ contract BenchmarkTest is Test {
         // Burn can be called only by owner or approved
         // so we are going to be owner
         vm.startPrank(tokenReceiver);
-        demoERC1155.batchBurn(batchSize);
-        demoERC721.batchBurn(batchSize);
-        demoERC721A.batchBurn(batchSize);
-
-        uint256[] memory ids = new uint256[](batchSize);
-        for (uint256 i; i < batchSize;) {
-            ids[i] = i;
-
-            unchecked {
-                ++i;
-            }
-        }
-
+        demoERC1155.batchBurn(ids);
+        demoERC721.batchBurn(ids);
+        demoERC721A.batchBurn(ids);
         demoERC721AOptB.batchBurn(ids);
     }
 
     function testSingleTransfer() public showReadWrites(false, "SingleTransfer") {
         address demoTo = address(2);
+        uint256 demoId = 2;
 
-        _singleMintNonOptimized(tokenReceiver);
+        _singleMintNonOptimized(tokenReceiver, demoId);
         demoERC721AOptT.singleMint(tokenReceiver);
 
         _startRecord();
 
         vm.startPrank(tokenReceiver);
 
-        demoERC721.singleTransfer(demoTo, 0);
-        demoERC1155.singleTransfer(demoTo, 0);
+        demoERC721.singleTransfer(demoTo, demoId);
+        demoERC1155.singleTransfer(demoTo, demoId);
         demoERC721A.singleTransfer(demoTo, 0);
-        demoERC721AOptT.singleTransfer(demoTo, _asSingletonArray(0));
+        demoERC721AOptT.singleTransfer(demoTo, 0);
     }
 
     function testBatchTransfer() public showReadWrites(false, "BatchTransfer") {
         address demoTo = address(2);
+        uint256[] memory ids = _createIds(true, batchSize);
 
-        _batchMintNonOptimized(tokenReceiver, batchSize);
+        _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptT.batchMint(tokenReceiver, batchSize);
 
         _startRecord();
 
         vm.startPrank(tokenReceiver);
 
-        demoERC721.batchTransfer(demoTo, batchSize);
-        demoERC1155.batchTransfer(demoTo, batchSize);
-        demoERC721A.batchTransfer(demoTo, batchSize);
-
-        uint256[] memory ids = new uint256[](batchSize);
-        for (uint256 i; i < batchSize;) {
-            ids[i] = i;
-
-            unchecked {
-                ++i;
-            }
-        }
-
+        demoERC721.batchTransfer(demoTo, ids);
+        demoERC1155.batchTransfer(demoTo, ids);
+        demoERC721A.batchTransfer(demoTo, ids);
         demoERC721AOptT.batchTransfer(demoTo, ids);
     }
 
-    function _singleMintNonOptimized(address account) private {
-        demoERC1155.singleMint(account);
-        demoERC721.singleMint(account);
+    function _singleMintNonOptimized(address account, uint256 id) private {
+        demoERC1155.singleMint(account, id);
+        demoERC721.singleMint(account, id);
+        // Tokens always minted in suquential order
         demoERC721A.singleMint(account);
     }
 
-    function _batchMintNonOptimized(address account, uint256 quantity) private {
-        demoERC1155.batchMint(account, quantity);
-        demoERC721.batchMint(account, quantity);
-        demoERC721A.batchMint(account, quantity);
+    function _batchMintNonOptimized(address account, uint256[] memory ids) private {
+        demoERC1155.batchMint(account, ids);
+        demoERC721.batchMint(account, ids);
+        // Tokens always minted in suquential order
+        demoERC721A.batchMint(account, ids.length);
     }
 
     function _startRecord() private {
@@ -180,6 +168,19 @@ contract BenchmarkTest is Test {
      */
     function _print(string memory cName, uint256 reads, uint256 writes) private view {
         console.log("%s - reads: %d - writes: %d", cName, reads - writes, writes);
+    }
+
+    function _createIds(bool seqential, uint256 quantity) private view returns (uint256[] memory) {
+        uint256[] memory ids = new uint256[](quantity);
+        for (uint256 i; i < batchSize;) {
+            ids[i] = seqential ? i : uint256(keccak256(abi.encodePacked(i)));
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        return ids;
     }
 
     function _asSingletonArray(uint256 element) private pure returns (uint256[] memory) {
