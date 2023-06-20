@@ -15,10 +15,6 @@ import {DemoERC721AOptB} from "../src/DemoERC721AOptB.sol";
  *         -  For 1155, it should have at least 1 read and 1 write
  * [x] Add single and batch transfers
  * [x] Add non-sequenctial options for burn and transfer
- *         -  Removed as it produces the same results for 721 and 1155, and 721OptB and 721OptT
- *            Expect the ids in accenting order. Maybe these should be tested with a different ranges?
- * Gas report should be generated with the same batch size every time in order to get proper values
- * Read and write operations should be also generated separately
  */
 
 contract BenchmarkTest is Test {
@@ -52,8 +48,7 @@ contract BenchmarkTest is Test {
     }
 
     function testBatchMint() public showReadWrites(true, "BatchMint") {
-        uint256[] memory ids = _createIds({quantity: batchSize});
-        _batchMintNonOptimized(tokenReceiver, ids);
+        _batchMintNonOptimized(tokenReceiver, _createIds(batchSize));
     }
 
     function testSingleBurn() public showReadWrites(false, "SingleBurn") {
@@ -76,14 +71,15 @@ contract BenchmarkTest is Test {
     }
 
     function testBatchBurnNonSequential() public showReadWrites(false, "BatchBurnNonSequential") {
-        _batchBurn({ids: _createIds(batchSize), sequential: false});
+        // As every even id will be taken
+        _batchBurn({ids: _createIds(batchSize * 2), sequential: false});
     }
 
     function _batchBurn(uint256[] memory ids, bool sequential) private {
-        uint256[] memory burnIds = sequential ? ids : _exctractEvenIds(ids);
-
         _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptB.batchMint(tokenReceiver, ids.length);
+
+        uint256[] memory burnIds = sequential ? ids : _exctractEvenIds(ids);
 
         vm.record();
         vm.startPrank(tokenReceiver);
@@ -120,15 +116,16 @@ contract BenchmarkTest is Test {
     }
 
     function testBatchTransferNonSequential() public showReadWrites(false, "BatchTransferNonSequential") {
-        _batchTransfer({ids: _createIds(batchSize), sequential: false});
+        // As every even id will be taken
+        _batchTransfer({ids: _createIds(batchSize * 2), sequential: false});
     }
 
     function _batchTransfer(uint256[] memory ids, bool sequential) private {
-        address demoTo = address(2);
-        uint256[] memory transferIds = sequential ? ids : _exctractEvenIds(ids);
-
         _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptT.batchMint(tokenReceiver, ids.length);
+
+        address demoTo = address(2);
+        uint256[] memory transferIds = sequential ? ids : _exctractEvenIds(ids);
 
         vm.record();
         vm.startPrank(tokenReceiver);
