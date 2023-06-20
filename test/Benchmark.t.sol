@@ -14,7 +14,9 @@ import {DemoERC721AOptB} from "../src/DemoERC721AOptB.sol";
  * [x] Check why single burn shows no reads or writes for 1155, 721, 721A
  *         -  For 1155, it should have at least 1 read and 1 write
  * [x] Add single and batch transfers
- * [] Add non-sequenctial options for burn and transfer
+ * [x] Add non-sequenctial options for burn and transfer
+ *         -  Removed as it produces the same results for 721 and 1155, and 721OptB and 721OptT
+ *            Expect the ids in accenting order. Maybe these should be tested with a different ranges?
  */
 
 contract BenchmarkTest is Test {
@@ -49,7 +51,7 @@ contract BenchmarkTest is Test {
     }
 
     function testBatchMint() public showReadWrites(true, "BatchMint") {
-        uint256[] memory ids = _createIds({seqential: true, quantity: batchSize});
+        uint256[] memory ids = _createIds({quantity: batchSize});
         _batchMintNonOptimized(tokenReceiver, ids);
     }
 
@@ -71,8 +73,9 @@ contract BenchmarkTest is Test {
         demoERC721AOptB.singleBurn(demoId);
     }
 
-    function testBatchBurn() public showReadWrites(false, "BatchBurn") {
-        uint256[] memory ids = _createIds(true, batchSize);
+    function testBatchBurnNonSequential() public showReadWrites(false, "BatchBurn") {
+        uint256[] memory ids = _createIds({quantity: batchSize});
+
         _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptB.batchMint(tokenReceiver, batchSize);
 
@@ -104,9 +107,9 @@ contract BenchmarkTest is Test {
         demoERC721AOptT.singleTransfer(demoTo, 0);
     }
 
-    function testBatchTransfer() public showReadWrites(false, "BatchTransfer") {
+    function testBatchTransferSequential() public showReadWrites(false, "BatchTransfer") {
         address demoTo = address(2);
-        uint256[] memory ids = _createIds(true, batchSize);
+        uint256[] memory ids = _createIds({quantity: batchSize});
 
         _batchMintNonOptimized(tokenReceiver, ids);
         demoERC721AOptT.batchMint(tokenReceiver, batchSize);
@@ -170,10 +173,10 @@ contract BenchmarkTest is Test {
         console.log("%s - reads: %d - writes: %d", cName, reads - writes, writes);
     }
 
-    function _createIds(bool seqential, uint256 quantity) private view returns (uint256[] memory) {
+    function _createIds(uint256 quantity) private view returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](quantity);
         for (uint256 i; i < batchSize;) {
-            ids[i] = seqential ? i : uint256(keccak256(abi.encodePacked(i)));
+            ids[i] = i;
 
             unchecked {
                 ++i;
