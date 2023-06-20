@@ -21,7 +21,7 @@ import {DemoERC721AOptB} from "../src/DemoERC721AOptB.sol";
  * Read and write operations should be also generated separately
  */
 
-contract BenchmarkTest is Test {
+abstract contract BenchmarkTest is Test {
     DemoERC1155 public demoERC1155;
     DemoERC721 public demoERC721;
     DemoERC721A public demoERC721A;
@@ -29,7 +29,6 @@ contract BenchmarkTest is Test {
     DemoERC721AOptB public demoERC721AOptB;
 
     uint256 public batchSize = 100;
-    bool public collectReadWrites = true;
     address public tokenReceiver = address(1);
 
     modifier showReadWrites(bool startRecord, string memory pTitle) {
@@ -37,7 +36,9 @@ contract BenchmarkTest is Test {
 
         _;
 
-        _getReadWrites(pTitle);
+        if (_collectReadWrites()) {
+            _getReadWrites(pTitle);
+        }
     }
 
     function setUp() public {
@@ -81,7 +82,10 @@ contract BenchmarkTest is Test {
     }
 
     function testBatchBurnNonSequential() public showReadWrites(false, "BatchBurnNonSequential") {
-        uint256[] memory ids = _createIds({quantity: batchSize});
+        // Multiplier added in case more ids are needed as only even ids will be used
+        // This way we will get a proper read/write report
+        uint256 multiplier = _collectReadWrites() ? 2 : 1;
+        uint256[] memory ids = _createIds({quantity: batchSize * multiplier});
         _batchBurn({ids: ids, sequential: false});
     }
 
@@ -125,7 +129,10 @@ contract BenchmarkTest is Test {
     }
 
     function testBatchTransferNonSequential() public showReadWrites(false, "BatchTransferNonSequential") {
-        uint256[] memory ids = _createIds({quantity: batchSize});
+        // Multiplier added in case more ids are needed as only even ids will be used
+        // This way we will get a proper read/write report
+        uint256 multiplier = _collectReadWrites() ? 2 : 1;
+        uint256[] memory ids = _createIds({quantity: batchSize * multiplier});
         _batchTransfer({ids: ids, sequential: false});
     }
 
@@ -161,12 +168,10 @@ contract BenchmarkTest is Test {
     }
 
     function _startRecord() private {
-        if (collectReadWrites) vm.record();
+        if (_collectReadWrites()) vm.record();
     }
 
     function _getReadWrites(string memory pTitle) private {
-        if (!collectReadWrites) return;
-
         bytes32[] memory reads;
         bytes32[] memory writes;
 
@@ -223,4 +228,6 @@ contract BenchmarkTest is Test {
 
         return array;
     }
+
+    function _collectReadWrites() internal virtual returns (bool);
 }

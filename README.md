@@ -6,15 +6,17 @@ Installed `Foundry` framework. See [this](https://github.com/foundry-rs/foundry)
 
 Benchmarking is done by running a test suite. The test can be found at the following path `test/Benchmark.t.sol`.
 
-In order to run a benchmark, run the following command in terminal:
+In order to retrieve gas report, run the following command in terminal:
 
 ```bash
-forge test --match-path ./test/Benchmark.t.sol --gas-report -vv
+forge test --match-path ./test/GasReport.t.sol --gas-report
 ```
 
-`--match-path` will make sure only `Benchmark` test will be executed
-`--gas-report` will generate a gas report for each contract and function
-`-vv` will make sure the output of the execution will include logs containing SSTORE/SLOAD reports
+In order to retrieve read/write report, run the following command:
+
+```bash
+forge test --match-path ./test/ReadWriteReport.t.sol -vv
+```
 
 The output of the execution is the following:
 - Gas report per contract and per function. Single and batch functions are separated for a clearer results and distinction
