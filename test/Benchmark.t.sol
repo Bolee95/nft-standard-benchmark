@@ -17,6 +17,8 @@ import {DemoERC721AOptB} from "../src/DemoERC721AOptB.sol";
  * [x] Add non-sequenctial options for burn and transfer
  *         -  Removed as it produces the same results for 721 and 1155, and 721OptB and 721OptT
  *            Expect the ids in accenting order. Maybe these should be tested with a different ranges?
+ * Gas report should be generated with the same batch size every time in order to get proper values
+ * Read and write operations should be also generated separately
  */
 
 contract BenchmarkTest is Test {
@@ -26,8 +28,8 @@ contract BenchmarkTest is Test {
     DemoERC721AOptT public demoERC721AOptT;
     DemoERC721AOptB public demoERC721AOptB;
 
-    bool public collectReadWrites = true;
     uint256 public batchSize = 100;
+    bool public collectReadWrites = true;
     address public tokenReceiver = address(1);
 
     modifier showReadWrites(bool startRecord, string memory pTitle) {
@@ -73,32 +75,31 @@ contract BenchmarkTest is Test {
         demoERC721AOptB.singleBurn(demoId);
     }
 
-    // function testBatchBurnSequential() public showReadWrites(false, "BatchBurnSequential") {
-    //     uint256[] memory ids = _createIds({quantity: batchSize});
-    //     _batchBurn(ids);
-    // }
+    function testBatchBurnSequential() public showReadWrites(false, "BatchBurnSequential") {
+        uint256[] memory ids = _createIds({quantity: batchSize});
+        _batchBurn({ids: ids, sequential: true});
+    }
 
     function testBatchBurnNonSequential() public showReadWrites(false, "BatchBurnNonSequential") {
         uint256[] memory ids = _createIds({quantity: batchSize});
-        _batchBurn(_exctractEvenIds(ids));
+        _batchBurn({ids: ids, sequential: false});
     }
 
-    function _batchBurn(uint256[] memory ids) private {
+    function _batchBurn(uint256[] memory ids, bool sequential) private {
+        uint256[] memory burnIds = sequential ? ids : _exctractEvenIds(ids);
+
         _batchMintNonOptimized(tokenReceiver, ids);
-        demoERC721AOptB.batchMint(tokenReceiver, batchSize);
+        demoERC721AOptB.batchMint(tokenReceiver, ids.length);
 
         _startRecord();
-
-        console.log(demoERC721A.totalSupply());
-        console.log(demoERC721A.ownerOf(98));
 
         // Burn can be called only by owner or approved
         // so we are going to be owner
         vm.startPrank(tokenReceiver);
-        demoERC1155.batchBurn(ids);
-        demoERC721.batchBurn(ids);
-        demoERC721A.batchBurn(ids);
-        // demoERC721AOptB.batchBurn(ids);
+        demoERC1155.batchBurn(burnIds);
+        demoERC721.batchBurn(burnIds);
+        demoERC721A.batchBurn(burnIds);
+        demoERC721AOptB.batchBurn(burnIds);
     }
 
     function testSingleTransfer() public showReadWrites(false, "SingleTransfer") {
@@ -118,21 +119,31 @@ contract BenchmarkTest is Test {
         demoERC721AOptT.singleTransfer(demoTo, 0);
     }
 
-    function testBatchTransfer() public showReadWrites(false, "BatchTransfer") {
-        address demoTo = address(2);
+    function testBatchTransferSequential() public showReadWrites(false, "BatchTransferSequential") {
         uint256[] memory ids = _createIds({quantity: batchSize});
+        _batchTransfer({ids: ids, sequential: true});
+    }
+
+    function testBatchTransferNonSequential() public showReadWrites(false, "BatchTransferNonSequential") {
+        uint256[] memory ids = _createIds({quantity: batchSize});
+        _batchTransfer({ids: ids, sequential: false});
+    }
+
+    function _batchTransfer(uint256[] memory ids, bool sequential) private {
+        address demoTo = address(2);
+        uint256[] memory transferIds = sequential ? ids : _exctractEvenIds(ids);
 
         _batchMintNonOptimized(tokenReceiver, ids);
-        demoERC721AOptT.batchMint(tokenReceiver, batchSize);
+        demoERC721AOptT.batchMint(tokenReceiver, ids.length);
 
         _startRecord();
 
         vm.startPrank(tokenReceiver);
 
-        demoERC721.batchTransfer(demoTo, ids);
-        demoERC1155.batchTransfer(demoTo, ids);
-        demoERC721A.batchTransfer(demoTo, ids);
-        demoERC721AOptT.batchTransfer(demoTo, ids);
+        demoERC721.batchTransfer(demoTo, transferIds);
+        demoERC1155.batchTransfer(demoTo, transferIds);
+        demoERC721A.batchTransfer(demoTo, transferIds);
+        demoERC721AOptT.batchTransfer(demoTo, transferIds);
     }
 
     function _singleMintNonOptimized(address account, uint256 id) private {
@@ -184,9 +195,9 @@ contract BenchmarkTest is Test {
         console.log("%s - reads: %d - writes: %d", cName, reads - writes, writes);
     }
 
-    function _createIds(uint256 quantity) private view returns (uint256[] memory) {
+    function _createIds(uint256 quantity) private pure returns (uint256[] memory) {
         uint256[] memory ids = new uint256[](quantity);
-        for (uint256 i; i < batchSize;) {
+        for (uint256 i; i < quantity;) {
             ids[i] = i;
 
             unchecked {
@@ -197,7 +208,7 @@ contract BenchmarkTest is Test {
         return ids;
     }
 
-    function _exctractEvenIds(uint256[] memory ids) private view returns (uint256[] memory) {
+    function _exctractEvenIds(uint256[] memory ids) private pure returns (uint256[] memory) {
         uint256[] memory evenIds = new uint256[](ids.length / 2);
         for (uint256 i; i < ids.length; i += 2) {
             evenIds[i / 2] = ids[i];
