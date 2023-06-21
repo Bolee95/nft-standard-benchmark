@@ -44,4 +44,6 @@ with `batchSize` and with `batchSize * 2` in case when non-sequential transfer/b
 For this reason, minimal gas consumtion (when `batchSize` tokens are minted)
 will be ~2x less then maximal gas consumption (when `batchSize * 2` tokens are minted).
 In this case, proper value that should be used is the minimal one, as it works with `batchSize` 
-amount of tokens, 
+amount of tokens.
+
+The pretier version of the report can be found in [report.md](./report.md) file.
